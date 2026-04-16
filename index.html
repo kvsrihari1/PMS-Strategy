@@ -1,0 +1,1168 @@
+import React from "react";
+import { useState, useEffect, useRef } from "react";
+
+const BRAND = {
+  navy: "#0A1628",
+  teal: "#0D7EA8",
+  gold: "#C9A84C",
+  lightTeal: "#1AADDC",
+  cream: "#F5F0E8",
+  white: "#FFFFFF",
+  gray: "#8A95A3",
+  lightGray: "#E8EDF2",
+  green: "#1CAF6A",
+};
+
+const strategies = {
+  VISION: {
+    name: "Prime Vision",
+    tagline: "Risk-Calibrated MF Strategy",
+    color: "#1CAF6A",
+    icon: "🎯",
+    fee: "0.75%",
+    horizon: "3–7+ years",
+    risk: "Moderate to High",
+    description:
+      "A curated portfolio of 8–15 direct mutual funds with scientific asset allocation across equity, debt, and gold. Available in Balanced (60/30/10), Growth (70/20/10), and Ultra (80/10/10) variants.",
+    idealFor: [
+      "First-time investors seeking professional MF management",
+      "Investors with 3–7 year wealth goals",
+      "Those wanting to move away from 30–50 fund clutter",
+      "Clients seeking to preserve recent equity gains",
+    ],
+    variants: [
+      { name: "Balanced", equity: 60, debt: 30, gold: 10, horizon: "3–5 yrs" },
+      { name: "Growth", equity: 70, debt: 20, gold: 10, horizon: "5–7 yrs" },
+      { name: "Ultra", equity: 80, debt: 10, gold: 10, horizon: "7+ yrs" },
+    ],
+  },
+  SYNERGY: {
+    name: "Prime Synergy",
+    tagline: "Dynamic MF + Stock Blend",
+    color: "#C9A84C",
+    icon: "⚡",
+    fee: "1.15%",
+    horizon: "5–7+ years",
+    risk: "Moderate to High",
+    description:
+      "An intelligent combination of outperforming mutual funds and alpha-generating stocks, with dual levers to adjust the equity-debt mix AND the stock-MF mix based on market conditions.",
+    idealFor: [
+      "Investors who own both stocks and MFs without structure",
+      "Those wanting best of both worlds — MF stability + stock alpha",
+      "Investors frustrated by portfolio overlaps",
+      "Time-constrained professionals with 5+ year horizon",
+    ],
+    variants: null,
+  },
+  VELOCITY: {
+    name: "Prime Velocity",
+    tagline: "Pure Equity Compounding",
+    color: "#1AADDC",
+    icon: "🚀",
+    fee: "1.55%",
+    horizon: "7+ years",
+    risk: "Very High",
+    description:
+      "A pure equity portfolio of quality compounders selected via the proprietary QQM framework (Quantitative + Qualitative + Macro). Market-cap agnostic with a core-satellite structure.",
+    idealFor: [
+      "Young/mid-career investors building a retirement corpus",
+      "High risk appetite investors with 7+ year horizon",
+      "Those seeking maximum long-term wealth creation",
+      "Seniors creating a legacy for their family",
+    ],
+    variants: null,
+  },
+};
+
+const questions = [
+  {
+    id: "timeline",
+    question: "What is your investment time horizon?",
+    subtitle: "How long can you stay invested without needing this money?",
+    options: [
+      { label: "3–5 years", value: "short", icon: "📅" },
+      { label: "5–7 years", value: "medium", icon: "📆" },
+      { label: "7+ years", value: "long", icon: "🗓️" },
+    ],
+  },
+  {
+    id: "risk",
+    question: "How do you react when markets fall 20%?",
+    subtitle: "Your honest reaction matters more than your ideal reaction.",
+    options: [
+      { label: "I panic and want to exit", value: "low", icon: "😰" },
+      { label: "I'm worried but stay put", value: "medium", icon: "😐" },
+      { label: "I see it as a buying opportunity", value: "high", icon: "😎" },
+    ],
+  },
+  {
+    id: "portfolio",
+    question: "What does your current portfolio look like?",
+    subtitle: "Choose the option that best describes your situation.",
+    options: [
+      { label: "Mostly mutual funds", value: "mf", icon: "📊" },
+      { label: "Mix of MFs and stocks", value: "both", icon: "🔀" },
+      { label: "Mainly direct stocks", value: "stocks", icon: "📈" },
+      { label: "Just starting out", value: "new", icon: "🌱" },
+    ],
+  },
+  {
+    id: "goal",
+    question: "What is your primary wealth goal?",
+    subtitle: "This helps us understand what you're optimising for.",
+    options: [
+      {
+        label: "Capital preservation + steady growth",
+        value: "preserve",
+        icon: "🛡️",
+      },
+      { label: "Long-term wealth creation", value: "grow", icon: "🌳" },
+      {
+        label: "Maximum compounding over decades",
+        value: "maximize",
+        icon: "💎",
+      },
+      { label: "Meet a specific financial goal", value: "goal", icon: "🎯" },
+    ],
+  },
+];
+
+function recommendStrategy(answers) {
+  const { timeline, risk, portfolio, goal } = answers;
+  let scores = { VISION: 0, SYNERGY: 0, VELOCITY: 0 };
+
+  // Timeline scoring
+  if (timeline === "short") scores.VISION += 3;
+  if (timeline === "medium") {
+    scores.VISION += 1;
+    scores.SYNERGY += 3;
+  }
+  if (timeline === "long") {
+    scores.SYNERGY += 1;
+    scores.VELOCITY += 3;
+  }
+
+  // Risk scoring
+  if (risk === "low") scores.VISION += 3;
+  if (risk === "medium") {
+    scores.VISION += 1;
+    scores.SYNERGY += 2;
+  }
+  if (risk === "high") {
+    scores.SYNERGY += 1;
+    scores.VELOCITY += 3;
+  }
+
+  // Portfolio scoring
+  if (portfolio === "mf" || portfolio === "new") scores.VISION += 2;
+  if (portfolio === "both") scores.SYNERGY += 3;
+  if (portfolio === "stocks") {
+    scores.SYNERGY += 1;
+    scores.VELOCITY += 2;
+  }
+
+  // Goal scoring
+  if (goal === "preserve") scores.VISION += 3;
+  if (goal === "grow") {
+    scores.VISION += 1;
+    scores.SYNERGY += 2;
+  }
+  if (goal === "maximize") {
+    scores.SYNERGY += 1;
+    scores.VELOCITY += 3;
+  }
+  if (goal === "goal") {
+    scores.VISION += 2;
+    scores.SYNERGY += 1;
+  }
+
+  const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  return {
+    primary: sorted[0][0],
+    secondary: sorted[1][0],
+    scores,
+  };
+}
+
+function AllocationBar({ equity, debt, gold }) {
+  return (
+    <div
+      style={{
+        borderRadius: 8,
+        overflow: "hidden",
+        height: 12,
+        display: "flex",
+        marginTop: 8,
+      }}
+    >
+      <div
+        style={{
+          width: `${equity}%`,
+          background: "#1CAF6A",
+          transition: "width 1s ease",
+        }}
+        title={`Equity ${equity}%`}
+      />
+      <div
+        style={{
+          width: `${debt}%`,
+          background: "#0D7EA8",
+          transition: "width 1s ease",
+        }}
+        title={`Debt ${debt}%`}
+      />
+      <div
+        style={{
+          width: `${gold}%`,
+          background: "#C9A84C",
+          transition: "width 1s ease",
+        }}
+        title={`Gold ${gold}%`}
+      />
+    </div>
+  );
+}
+
+function StrategyCard({ stratKey, strategy, isPrimary, answers }) {
+  const variantRec =
+    stratKey === "VISION" && answers.timeline
+      ? answers.timeline === "short"
+        ? strategy.variants[0]
+        : answers.timeline === "medium"
+        ? strategy.variants[1]
+        : strategy.variants[2]
+      : null;
+
+  return (
+    <div
+      style={{
+        border: isPrimary
+          ? `2px solid ${strategy.color}`
+          : `1px solid ${BRAND.lightGray}`,
+        borderRadius: 16,
+        padding: "24px",
+        background: isPrimary ? `${strategy.color}08` : BRAND.white,
+        position: "relative",
+        overflow: "hidden",
+        transition: "all 0.3s ease",
+      }}
+    >
+      {isPrimary && (
+        <div
+          style={{
+            position: "absolute",
+            top: 12,
+            right: 12,
+            background: strategy.color,
+            color: "#fff",
+            fontSize: 11,
+            fontWeight: 700,
+            padding: "3px 10px",
+            borderRadius: 20,
+            letterSpacing: 1,
+            textTransform: "uppercase",
+          }}
+        >
+          Best Match
+        </div>
+      )}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 12,
+        }}
+      >
+        <span style={{ fontSize: 28 }}>{strategy.icon}</span>
+        <div>
+          <div
+            style={{
+              fontWeight: 800,
+              fontSize: 18,
+              color: BRAND.navy,
+              fontFamily: "'Georgia', serif",
+            }}
+          >
+            {strategy.name}
+          </div>
+          <div
+            style={{
+              fontSize: 12,
+              color: strategy.color,
+              fontWeight: 600,
+              letterSpacing: 0.5,
+            }}
+          >
+            {strategy.tagline}
+          </div>
+        </div>
+      </div>
+
+      <p
+        style={{
+          fontSize: 13.5,
+          color: "#4A5568",
+          lineHeight: 1.7,
+          marginBottom: 16,
+        }}
+      >
+        {strategy.description}
+      </p>
+
+      <div
+        style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}
+      >
+        {[
+          { label: "Fee", value: strategy.fee },
+          { label: "Horizon", value: strategy.horizon },
+          { label: "Risk", value: strategy.risk },
+        ].map((item) => (
+          <div
+            key={item.label}
+            style={{
+              background: BRAND.lightGray,
+              borderRadius: 8,
+              padding: "6px 12px",
+              flex: 1,
+              minWidth: 80,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                color: BRAND.gray,
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+              }}
+            >
+              {item.label}
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: BRAND.navy }}>
+              {item.value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {variantRec && (
+        <div
+          style={{
+            background: `${strategy.color}15`,
+            border: `1px solid ${strategy.color}40`,
+            borderRadius: 10,
+            padding: "12px 16px",
+            marginBottom: 16,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: strategy.color,
+              letterSpacing: 0.5,
+              marginBottom: 6,
+              textTransform: "uppercase",
+            }}
+          >
+            Recommended Variant: {variantRec.name} ({variantRec.horizon})
+          </div>
+          <AllocationBar
+            equity={variantRec.equity}
+            debt={variantRec.debt}
+            gold={variantRec.gold}
+          />
+          <div
+            style={{
+              display: "flex",
+              gap: 16,
+              marginTop: 6,
+              fontSize: 11,
+              color: BRAND.gray,
+            }}
+          >
+            <span>🟢 Equity {variantRec.equity}%</span>
+            <span>🔵 Debt {variantRec.debt}%</span>
+            <span>🟡 Gold {variantRec.gold}%</span>
+          </div>
+        </div>
+      )}
+
+      <div>
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: BRAND.gray,
+            letterSpacing: 0.5,
+            marginBottom: 8,
+            textTransform: "uppercase",
+          }}
+        >
+          Ideal For
+        </div>
+        {strategy.idealFor.map((item, i) => (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              gap: 8,
+              marginBottom: 5,
+              alignItems: "flex-start",
+            }}
+          >
+            <span style={{ color: strategy.color, fontSize: 14, marginTop: 1 }}>
+              ✓
+            </span>
+            <span style={{ fontSize: 13, color: "#4A5568" }}>{item}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const faqs = [
+  {
+    q: "What's the minimum investment?",
+    a: "₹50 lakh per PAN. This can be spread across multiple strategies.",
+  },
+  {
+    q: "Are there exit charges?",
+    a: "1% exit load if you withdraw within the first year, 0.5% within 2 years. Nil after 2 years.",
+  },
+  {
+    q: "Is there profit sharing?",
+    a: "No. PrimeInvestor charges only a flat annual management fee — no profit sharing, no hidden charges. Your gains are yours.",
+  },
+  {
+    q: "How safe is the Power of Attorney?",
+    a: "The PoA is limited — it only allows buying/selling securities within your own Demat account. We cannot withdraw cash or transfer to any third-party account. Your stocks remain in your name, regulated by SEBI.",
+  },
+  {
+    q: "What are the tax implications?",
+    a: "PrimeInvestor manages tax impact through low portfolio churn and a core-satellite approach. Savings from direct plans (0.5–1% annually) typically offset the tax impact of rebalancing.",
+  },
+  {
+    q: "How is PrimeInvestor different from other PMS providers?",
+    a: "Traditional PMS providers are equity-only, high risk, and charge steep fees with profit sharing. Prime PMS offers multi-asset portfolios (MF, stocks, ETFs, bonds), options across risk profiles, and among the lowest fees in the industry — with no profit sharing.",
+  },
+];
+
+export default function PrimeAdvisor() {
+  const [step, setStep] = useState("intro"); // intro | quiz | result | faq
+  const [currentQ, setCurrentQ] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [result, setResult] = useState(null);
+  const [openFaq, setOpenFaq] = useState(null);
+  const [animIn, setAnimIn] = useState(true);
+  const containerRef = useRef(null);
+
+  const handleAnswer = (questionId, value) => {
+    const newAnswers = { ...answers, [questionId]: value };
+    setAnswers(newAnswers);
+
+    setAnimIn(false);
+    setTimeout(() => {
+      if (currentQ < questions.length - 1) {
+        setCurrentQ((q) => q + 1);
+        setAnimIn(true);
+      } else {
+        const rec = recommendStrategy(newAnswers);
+        setResult(rec);
+        setStep("result");
+        setAnimIn(true);
+      }
+    }, 250);
+  };
+
+  const reset = () => {
+    setStep("intro");
+    setCurrentQ(0);
+    setAnswers({});
+    setResult(null);
+    setAnimIn(true);
+  };
+
+  const styles = {
+    wrapper: {
+      fontFamily:
+        "'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif",
+      background: `linear-gradient(135deg, ${BRAND.navy} 0%, #0F2040 50%, #162A4A 100%)`,
+      minHeight: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      padding: "0 16px 40px",
+    },
+    header: {
+      width: "100%",
+      maxWidth: 860,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: "20px 0",
+      borderBottom: `1px solid rgba(255,255,255,0.08)`,
+      marginBottom: 0,
+    },
+    logo: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+    },
+    logoText: {
+      color: BRAND.white,
+      fontSize: 18,
+      fontWeight: 700,
+      letterSpacing: 0.5,
+    },
+    nav: {
+      display: "flex",
+      gap: 24,
+    },
+    navBtn: (active) => ({
+      background: "none",
+      border: "none",
+      color: active ? BRAND.gold : "rgba(255,255,255,0.5)",
+      fontSize: 13,
+      cursor: "pointer",
+      fontFamily: "inherit",
+      fontWeight: active ? 700 : 400,
+      borderBottom: active
+        ? `1px solid ${BRAND.gold}`
+        : "1px solid transparent",
+      paddingBottom: 2,
+      transition: "all 0.2s",
+    }),
+    card: {
+      background: BRAND.white,
+      borderRadius: 20,
+      padding: "40px",
+      width: "100%",
+      maxWidth: 860,
+      marginTop: 32,
+      boxShadow: "0 32px 80px rgba(0,0,0,0.3)",
+      opacity: animIn ? 1 : 0,
+      transform: animIn ? "translateY(0)" : "translateY(10px)",
+      transition: "all 0.35s ease",
+    },
+  };
+
+  return (
+    <div style={styles.wrapper}>
+      {/* Header */}
+      <div style={styles.header}>
+        <div style={styles.logo}>
+          <div
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 8,
+              background: BRAND.teal,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 16,
+            }}
+          >
+            ₹
+          </div>
+          <span style={styles.logoText}>PrimeInvestor PMS</span>
+        </div>
+        <div style={styles.nav}>
+          <button
+            style={styles.navBtn(step !== "faq")}
+            onClick={() => step === "faq" && setStep("intro")}
+          >
+            Advisor
+          </button>
+          <button
+            style={styles.navBtn(step === "faq")}
+            onClick={() => setStep("faq")}
+          >
+            FAQ
+          </button>
+        </div>
+      </div>
+
+      {/* Intro */}
+      {step === "intro" && (
+        <div style={styles.card}>
+          <div style={{ textAlign: "center", marginBottom: 32 }}>
+            <div
+              style={{
+                display: "inline-block",
+                background: `${BRAND.gold}18`,
+                border: `1px solid ${BRAND.gold}40`,
+                borderRadius: 20,
+                padding: "6px 18px",
+                fontSize: 12,
+                color: BRAND.gold,
+                fontWeight: 700,
+                letterSpacing: 1,
+                textTransform: "uppercase",
+                marginBottom: 16,
+              }}
+            >
+              Free · 2 minute assessment
+            </div>
+            <h1
+              style={{
+                fontSize: "clamp(26px, 5vw, 38px)",
+                fontWeight: 800,
+                color: BRAND.navy,
+                marginBottom: 12,
+                lineHeight: 1.2,
+              }}
+            >
+              Find Your Perfect
+              <br />
+              <span style={{ color: BRAND.teal }}>PMS Strategy</span>
+            </h1>
+            <p
+              style={{
+                color: "#4A5568",
+                fontSize: 16,
+                maxWidth: 520,
+                margin: "0 auto",
+                lineHeight: 1.7,
+              }}
+            >
+              Answer 4 simple questions and our advisor will recommend the
+              best-fit portfolio from Vision, Synergy, or Velocity — backed by 7
+              decades of combined investment expertise.
+            </p>
+          </div>
+
+          {/* 3 strategy previews */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 16,
+              marginBottom: 32,
+            }}
+          >
+            {Object.entries(strategies).map(([key, s]) => (
+              <div
+                key={key}
+                style={{
+                  border: `1px solid ${s.color}40`,
+                  borderRadius: 12,
+                  padding: "16px",
+                  background: `${s.color}06`,
+                  textAlign: "center",
+                }}
+              >
+                <div style={{ fontSize: 28, marginBottom: 8 }}>{s.icon}</div>
+                <div
+                  style={{ fontWeight: 700, color: BRAND.navy, fontSize: 14 }}
+                >
+                  {s.name}
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: s.color,
+                    fontWeight: 600,
+                    marginTop: 2,
+                  }}
+                >
+                  {s.tagline}
+                </div>
+                <div style={{ fontSize: 11, color: BRAND.gray, marginTop: 6 }}>
+                  {s.horizon}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ textAlign: "center" }}>
+            <button
+              onClick={() => {
+                setStep("quiz");
+                setAnimIn(true);
+              }}
+              style={{
+                background: `linear-gradient(135deg, ${BRAND.teal}, ${BRAND.navy})`,
+                color: BRAND.white,
+                border: "none",
+                borderRadius: 50,
+                padding: "16px 48px",
+                fontSize: 16,
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                letterSpacing: 0.5,
+                boxShadow: `0 8px 24px ${BRAND.teal}40`,
+                transition: "transform 0.2s, box-shadow 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = `0 12px 32px ${BRAND.teal}50`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = `0 8px 24px ${BRAND.teal}40`;
+              }}
+            >
+              Start Assessment →
+            </button>
+            <p style={{ fontSize: 12, color: BRAND.gray, marginTop: 12 }}>
+              Min. investment ₹50 lakh · SEBI Registered · No spam
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Quiz */}
+      {step === "quiz" && (
+        <div style={styles.card}>
+          {/* Progress */}
+          <div style={{ marginBottom: 32 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: 8,
+              }}
+            >
+              <span
+                style={{ fontSize: 12, color: BRAND.gray, fontWeight: 600 }}
+              >
+                Question {currentQ + 1} of {questions.length}
+              </span>
+              <span
+                style={{ fontSize: 12, color: BRAND.teal, fontWeight: 700 }}
+              >
+                {Math.round((currentQ / questions.length) * 100)}% complete
+              </span>
+            </div>
+            <div
+              style={{
+                background: BRAND.lightGray,
+                borderRadius: 4,
+                height: 4,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  width: `${(currentQ / questions.length) * 100}%`,
+                  background: `linear-gradient(90deg, ${BRAND.teal}, ${BRAND.lightTeal})`,
+                  transition: "width 0.5s ease",
+                  borderRadius: 4,
+                }}
+              />
+            </div>
+          </div>
+
+          <h2
+            style={{
+              fontSize: "clamp(20px, 4vw, 26px)",
+              fontWeight: 800,
+              color: BRAND.navy,
+              marginBottom: 6,
+            }}
+          >
+            {questions[currentQ].question}
+          </h2>
+          <p style={{ color: BRAND.gray, fontSize: 14, marginBottom: 28 }}>
+            {questions[currentQ].subtitle}
+          </p>
+
+          <div style={{ display: "grid", gap: 12 }}>
+            {questions[currentQ].options.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => handleAnswer(questions[currentQ].id, opt.value)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16,
+                  padding: "16px 20px",
+                  border: `2px solid ${BRAND.lightGray}`,
+                  borderRadius: 12,
+                  background: BRAND.white,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  textAlign: "left",
+                  transition: "all 0.2s",
+                  fontSize: 15,
+                  color: BRAND.navy,
+                  fontWeight: 500,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = BRAND.teal;
+                  e.currentTarget.style.background = `${BRAND.teal}08`;
+                  e.currentTarget.style.transform = "translateX(4px)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = BRAND.lightGray;
+                  e.currentTarget.style.background = BRAND.white;
+                  e.currentTarget.style.transform = "translateX(0)";
+                }}
+              >
+                <span
+                  style={{ fontSize: 24, minWidth: 32, textAlign: "center" }}
+                >
+                  {opt.icon}
+                </span>
+                <span>{opt.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {currentQ > 0 && (
+            <button
+              onClick={() => {
+                setCurrentQ((q) => q - 1);
+                setAnimIn(true);
+              }}
+              style={{
+                marginTop: 20,
+                background: "none",
+                border: "none",
+                color: BRAND.gray,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                fontSize: 13,
+              }}
+            >
+              ← Back
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Result */}
+      {step === "result" && result && (
+        <div style={{ ...styles.card, padding: "32px" }}>
+          <div style={{ textAlign: "center", marginBottom: 28 }}>
+            <div
+              style={{
+                display: "inline-block",
+                background: `${strategies[result.primary].color}18`,
+                border: `1px solid ${strategies[result.primary].color}40`,
+                borderRadius: 20,
+                padding: "6px 18px",
+                fontSize: 12,
+                color: strategies[result.primary].color,
+                fontWeight: 700,
+                letterSpacing: 1,
+                textTransform: "uppercase",
+                marginBottom: 12,
+              }}
+            >
+              Your Recommendation
+            </div>
+            <h2
+              style={{
+                fontSize: "clamp(22px, 4vw, 30px)",
+                fontWeight: 800,
+                color: BRAND.navy,
+                marginBottom: 8,
+              }}
+            >
+              {strategies[result.primary].icon}{" "}
+              {strategies[result.primary].name} is your best match
+            </h2>
+            <p style={{ color: "#4A5568", fontSize: 14 }}>
+              Based on your profile, here's our full analysis
+            </p>
+          </div>
+
+          {/* Primary + Secondary */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 20,
+              marginBottom: 24,
+            }}
+          >
+            <StrategyCard
+              stratKey={result.primary}
+              strategy={strategies[result.primary]}
+              isPrimary={true}
+              answers={answers}
+            />
+            <StrategyCard
+              stratKey={result.secondary}
+              strategy={strategies[result.secondary]}
+              isPrimary={false}
+              answers={answers}
+            />
+          </div>
+
+          {/* Match scores */}
+          <div
+            style={{
+              background: BRAND.lightGray,
+              borderRadius: 12,
+              padding: "20px",
+              marginBottom: 24,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: BRAND.gray,
+                letterSpacing: 0.5,
+                marginBottom: 12,
+                textTransform: "uppercase",
+              }}
+            >
+              Compatibility Scores
+            </div>
+            {Object.entries(result.scores)
+              .sort((a, b) => b[1] - a[1])
+              .map(([key, score]) => {
+                const maxScore = Math.max(...Object.values(result.scores));
+                const pct = Math.round((score / maxScore) * 100);
+                return (
+                  <div key={key} style={{ marginBottom: 10 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginBottom: 4,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: BRAND.navy,
+                        }}
+                      >
+                        {strategies[key].icon} {strategies[key].name}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          color: strategies[key].color,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {pct}%
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        background: "#D1D9E0",
+                        borderRadius: 4,
+                        height: 6,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: "100%",
+                          width: `${pct}%`,
+                          background: strategies[key].color,
+                          borderRadius: 4,
+                          transition: "width 1s ease",
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+
+          {/* CTA */}
+          <div
+            style={{
+              background: `linear-gradient(135deg, ${BRAND.navy} 0%, #1A3A5C 100%)`,
+              borderRadius: 14,
+              padding: "24px",
+              textAlign: "center",
+              color: BRAND.white,
+            }}
+          >
+            <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>
+              Ready to get started?
+            </div>
+            <p
+              style={{
+                fontSize: 13,
+                color: "rgba(255,255,255,0.7)",
+                marginBottom: 20,
+              }}
+            >
+              Introductory pricing available for early investors. Min. ₹50 lakh
+              per PAN.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                justifyContent: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <a
+                href="mailto:contact@primeinvestor.in"
+                style={{
+                  background: BRAND.gold,
+                  color: BRAND.navy,
+                  padding: "12px 28px",
+                  borderRadius: 50,
+                  fontWeight: 700,
+                  fontSize: 14,
+                  textDecoration: "none",
+                  display: "inline-block",
+                }}
+              >
+                Contact Us →
+              </a>
+              <button
+                onClick={reset}
+                style={{
+                  background: "rgba(255,255,255,0.12)",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  color: BRAND.white,
+                  padding: "12px 28px",
+                  borderRadius: 50,
+                  fontWeight: 600,
+                  fontSize: 14,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                Retake Quiz
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FAQ */}
+      {step === "faq" && (
+        <div style={styles.card}>
+          <h2
+            style={{
+              fontSize: 28,
+              fontWeight: 800,
+              color: BRAND.navy,
+              marginBottom: 6,
+            }}
+          >
+            Common Questions
+          </h2>
+          <p style={{ color: BRAND.gray, fontSize: 14, marginBottom: 28 }}>
+            Answers to what investors ask us most often.
+          </p>
+          <div style={{ display: "grid", gap: 8 }}>
+            {faqs.map((faq, i) => (
+              <div
+                key={i}
+                style={{
+                  border: `1px solid ${
+                    openFaq === i ? BRAND.teal : BRAND.lightGray
+                  }`,
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  transition: "border-color 0.2s",
+                }}
+              >
+                <button
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "16px 20px",
+                    background: openFaq === i ? `${BRAND.teal}08` : BRAND.white,
+                    border: "none",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    textAlign: "left",
+                    fontSize: 15,
+                    fontWeight: 600,
+                    color: BRAND.navy,
+                    transition: "background 0.2s",
+                  }}
+                >
+                  {faq.q}
+                  <span
+                    style={{
+                      color: BRAND.teal,
+                      fontSize: 20,
+                      fontWeight: 300,
+                      minWidth: 20,
+                    }}
+                  >
+                    {openFaq === i ? "−" : "+"}
+                  </span>
+                </button>
+                {openFaq === i && (
+                  <div
+                    style={{
+                      padding: "0 20px 16px",
+                      fontSize: 14,
+                      color: "#4A5568",
+                      lineHeight: 1.7,
+                      borderTop: `1px solid ${BRAND.lightGray}`,
+                      paddingTop: 14,
+                    }}
+                  >
+                    {faq.a}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div style={{ textAlign: "center", marginTop: 28 }}>
+            <button
+              onClick={() => setStep("intro")}
+              style={{
+                background: `linear-gradient(135deg, ${BRAND.teal}, ${BRAND.navy})`,
+                color: BRAND.white,
+                border: "none",
+                borderRadius: 50,
+                padding: "14px 36px",
+                fontSize: 15,
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              Find My Strategy →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div
+        style={{
+          maxWidth: 860,
+          width: "100%",
+          textAlign: "center",
+          marginTop: 24,
+        }}
+      >
+        <p
+          style={{
+            color: "rgba(255,255,255,0.3)",
+            fontSize: 11,
+            lineHeight: 1.6,
+          }}
+        >
+          PrimeInvestor Financial Research Pvt. Ltd. · SEBI Registered Portfolio
+          Manager · INP000009658
+          <br />
+          This tool is for informational purposes only. Investments are subject
+          to market risks.
+        </p>
+      </div>
+    </div>
+  );
+}
